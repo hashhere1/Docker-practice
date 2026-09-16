@@ -4,8 +4,9 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models.users import User
 from app.schema.user import UserResponse, UserUpdate
-from app.utils.dependencies import get_current_user
+from app.utils.dependencies import get_current_user, verify_user_ownership
 from app.utils.security import hash_password
+from sqlalchemy import or_
 
 router = APIRouter(prefix="/users", tags=["Users"])
 
@@ -32,38 +33,77 @@ def get_user_by_id(
 
 @router.put("/{user_id}", response_model=UserResponse)
 def update_user(
-    user_id: int,
-    user_update : UserUpdate,
-    current_user : User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    user_update: UserUpdate,
+    current_user: User = Depends(verify_user_ownership),
+    db: Session = Depends(get_db),
 ):
-    if current_user.id != user_id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not authorized to update this account"
-        )
     update_data = user_update.model_dump(exclude_unset=True)
-    if "password" in update_data:
-        update_data["hashed_password"] = hash_password(update_data.pop("password"))
 
-    for field, value in update_data.items():
-        setattr(current_user, field, value)
+    if not update_data:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No fields provided for update",
+        )
+
+    conditions = []
+
+    if user_update.username is not None:
+        conditions.append(User.username == user_update.username)
+
+    if user_update.email is not None:
+        conditions.append(User.email == user_update.email)
+
+    if conditions:
+        conflict = (
+            db.query(User)
+            .filter(
+                User.id != current_user.id,
+                or_(*conditions),
+            )
+            .first()
+        )
+
+        if conflict:
+            if (
+                user_update.username is not None
+                and conflict.username == user_update.username
+            ):
+                detail = "Username already in use"
+            elif (
+                user_update.email is not None
+                and conflict.email == user_update.email
+            ):
+                detail = "Email already in use"
+            else:
+                detail = "Username or email already in use"
+
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=detail,
+            )
+
+    if user_update.username is not None:
+        current_user.username = user_update.username
+
+    if user_update.email is not None:
+        current_user.email = user_update.email
+
+    if user_update.password is not None:
+        current_user.hashed_password = hash_password(
+            user_update.password
+        )
 
     db.commit()
     db.refresh(current_user)
+
     return current_user
 
 @router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_user(
-    user_id: int,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(verify_user_ownership),
     db: Session = Depends(get_db)
 ):
-    if current_user.id != user_id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not authorized to delete this account"
-        )
+    
     db.delete(current_user)
     db.commit()
     return None
