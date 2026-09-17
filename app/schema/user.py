@@ -20,6 +20,7 @@ def check_password(v: Optional[str]) -> Optional[str]:
             raise ValueError("Password cannot be empty or whitespaces only")
         if not any(char.isdigit() for char in v):
             raise ValueError("Password must contain atleast one number")
+        return v
 
 class UserBase(BaseModel):
     username : str = Field(
