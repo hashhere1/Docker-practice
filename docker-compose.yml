@@ -1,0 +1,82 @@
+version: "3.8"
+
+services:
+  postgres_db:
+    image: postgres:16-alpine
+    container_name: postgres_db
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis_cache:
+    image: redis:7-alpine
+    container_name: redis_cache
+    restart: always
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  web:
+    build: .
+    container_name: fastapi_app
+    restart: always
+    environment:
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres_db:5432/${POSTGRES_DB}
+      - REDIS_URL=redis://redis_cache:6379/0
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app
+    depends_on:
+      postgres_db:
+        condition: service_healthy
+      redis_cache:
+        condition: service_healthy
+
+  celery_worker:
+    build: .
+    container_name: celery_worker
+    restart: always
+    command: celery -A app.core.celery_app.celery_app worker --loglevel=info
+    environment:
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres_db:5432/${POSTGRES_DB}
+      - REDIS_URL=redis://redis_cache:6379/0
+    volumes:
+      - .:/app
+    depends_on:
+      redis_cache:
+        condition: service_healthy
+      postgres_db:
+        condition: service_healthy
+
+  celery_beat:
+    build: .
+    container_name: celery_beat
+    restart: always
+    command: celery -A app.core.celery_app.celery_app beat --loglevel=info
+    environment:
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres_db:5432/${POSTGRES_DB}
+      - REDIS_URL=redis://redis_cache:6379/0
+    volumes:
+      - .:/app
+    depends_on:
+      redis_cache:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
