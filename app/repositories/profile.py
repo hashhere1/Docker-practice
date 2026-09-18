@@ -1,27 +1,13 @@
-from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 from app.models.users import Profile, User
 from app.schema.profile import ProfileCreate, ProfileUpdate
 
 
 def get_profile(current_user: User, db: Session):
-    profile = db.query(Profile).filter(Profile.user_id == current_user.id).first()
-    if not profile:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Profile not found",
-        )
-    return profile
+    return db.query(Profile).filter(Profile.user_id == current_user.id).first()
 
 
 def create_profile(profile_in: ProfileCreate, current_user: User, db: Session):
-    existing_profile = db.query(Profile).filter(Profile.user_id == current_user.id).first()
-    if existing_profile:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Profile already exists for this user",
-        )
-
     new_profile = Profile(
         user_id=current_user.id,
         **profile_in.model_dump(exclude_unset=True),
@@ -32,21 +18,8 @@ def create_profile(profile_in: ProfileCreate, current_user: User, db: Session):
     return new_profile
 
 
-def update_profile(profile_in: ProfileUpdate, current_user: User, db: Session):
-    profile = db.query(Profile).filter(Profile.user_id == current_user.id).first()
-    if not profile:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Profile not found",
-        )
-
+def update_profile(profile_in: ProfileUpdate, profile: Profile, db: Session):
     update_data = profile_in.model_dump(exclude_unset=True)
-    if not update_data:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="No fields provided for update",
-        )
-
     for field, value in update_data.items():
         setattr(profile, field, value)
 
@@ -55,14 +28,7 @@ def update_profile(profile_in: ProfileUpdate, current_user: User, db: Session):
     return profile
 
 
-def delete_profile(current_user: User, db: Session):
-    profile = db.query(Profile).filter(Profile.user_id == current_user.id).first()
-    if not profile:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Profile not found",
-        )
-
+def delete_profile(profile: Profile, db: Session):
     db.delete(profile)
     db.commit()
     return None
