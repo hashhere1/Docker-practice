@@ -4,45 +4,48 @@ from sqlalchemy.orm import Session
 from app.models.users import User
 
 
-def get_all(db: Session, skip: int = 0, limit: int = 100) -> List[User]:
-    return db.query(User).offset(skip).limit(limit).all()
+class UserRepository:
+    def __init__(self, db: Session):
+        self.db = db
 
-
-def get_by_id(db: Session, user_id: int) -> Optional[User]:
-    return db.query(User).filter(User.id == user_id).first()
-
-
-def get_conflicting_user(
-    db: Session,
-    user_id: int,
-    username: Optional[str] = None,
-    email: Optional[str] = None,
-                ) -> Optional[User]:
+    def get_all(self, skip: int = 0, limit: int = 100) -> List[User]:
+        return self.db.query(User).offset(skip).limit(limit).all()
     
-    conditions = []
-    if username is not None:
-        conditions.append(User.username == username)
-    if email is not None:
-        conditions.append(User.email == email)
 
-    if not conditions:
-        return None
+    def get_by_id(self, user_id: int) -> Optional[User]:
+        return self.db.query(User).filter(User.id == user_id).first()
+    
 
-    return (
-        db.query(User).filter(User.id != user_id, or_(*conditions)).first()
-    )
+    def get_conflicting_user(
+        self,
+        user_id: int,
+        username: Optional[str] = None,
+        email: Optional[str] = None,
+    ) -> Optional[User]:
+        conditions = []
+        if username is not None:
+            conditions.append(User.username == username)
+        if email is not None:
+            conditions.append(User.email == email)
 
+        if not conditions:
+            return None
 
-def update(db: Session, current_user: User, update_data: Dict[str, Any]) -> User:
+        return (
+            self.db.query(User)
+            .filter(User.id != user_id, or_(*conditions))
+            .first()
+        )
+    
 
-    for field, value in update_data.items():
-        setattr(current_user, field, value)
-        
-    db.commit()
-    db.refresh(current_user)
-    return current_user
+    def update(self, current_user: User, update_data: Dict[str, Any]) -> User:
+        for field, value in update_data.items():
+            setattr(current_user, field, value)
+        self.db.commit()
+        self.db.refresh(current_user)
+        return current_user
+    
 
-
-def delete(db: Session, current_user: User) -> None:
-    db.delete(current_user)
-    db.commit()
+    def delete(self, current_user: User) -> None:
+        self.db.delete(current_user)
+        self.db.commit()

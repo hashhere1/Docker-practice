@@ -1,34 +1,29 @@
+from typing import Any, Dict, Optional
 from sqlalchemy.orm import Session
-from app.models.users import Profile, User
-from app.schema.profile import ProfileCreate, ProfileUpdate
+from app.models.users import Profile
 
 
-def get_profile(current_user: User, db: Session):
-    return db.query(Profile).filter(Profile.user_id == current_user.id).first()
+class ProfileRepository:
+    def __init__(self, db: Session):
+        self.db = db
 
+    def get_profile(self, user_id: int) -> Optional[Profile]:
+        return self.db.query(Profile).filter(Profile.user_id == user_id).first()
 
-def create_profile(profile_in: ProfileCreate, current_user: User, db: Session):
-    new_profile = Profile(
-        user_id=current_user.id,
-        **profile_in.model_dump(exclude_unset=True),
-    )
-    db.add(new_profile)
-    db.commit()
-    db.refresh(new_profile)
-    return new_profile
+    def create_profile(self, user_id: int, profile_data: Dict[str, Any]) -> Profile:
+        new_profile = Profile(user_id=user_id, **profile_data)
+        self.db.add(new_profile)
+        self.db.commit()
+        self.db.refresh(new_profile)
+        return new_profile
 
+    def update_profile(self, profile: Profile, update_data: Dict[str, Any]) -> Profile:
+        for field, value in update_data.items():
+            setattr(profile, field, value)
+        self.db.commit()
+        self.db.refresh(profile)
+        return profile
 
-def update_profile(profile_in: ProfileUpdate, profile: Profile, db: Session):
-    update_data = profile_in.model_dump(exclude_unset=True)
-    for field, value in update_data.items():
-        setattr(profile, field, value)
-
-    db.commit()
-    db.refresh(profile)
-    return profile
-
-
-def delete_profile(profile: Profile, db: Session):
-    db.delete(profile)
-    db.commit()
-    return None
+    def delete_profile(self, profile: Profile) -> None:
+        self.db.delete(profile)
+        self.db.commit()
