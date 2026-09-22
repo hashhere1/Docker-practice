@@ -31,6 +31,7 @@ if config.config_file_name is not None:
 from app.database import Base
 from app.models.users import User, Profile
 from app.models.files import UserFile
+from app.models.google_drive_connection import GoogleDriveConnection
 
 target_metadata = Base.metadata
 
