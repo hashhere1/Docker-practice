@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Google Drive Integration</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background-color: #f3f4f6;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      margin: 0;
+    }
+    .card {
+      background: #ffffff;
+      padding: 32px;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      width: 100%;
+      max-width: 420px;
+    }
+    h2 {
+      margin-top: 0;
+      color: #111827;
+    }
+    p {
+      color: #4b5563;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+    .form-group {
+      margin-bottom: 16px;
+    }
+    label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: #374151;
+      margin-bottom: 6px;
+    }
+    input {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 8px 12px;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+    button {
+      width: 100%;
+      padding: 10px 16px;
+      background-color: #2563eb;
+      color: #ffffff;
+      border: none;
+      border-radius: 6px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    button:disabled {
+      opacity: 0.7;
+      cursor: not-allowed;
+    }
+    .error {
+      color: #dc2626;
+      font-size: 13px;
+      margin-bottom: 12px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="card">
+    <h2>Google Drive Storage</h2>
+    <p>Connect your personal Google Drive account to allow uploads and manage files.</p>
+
+    <div class="form-group">
+      <label for="jwtToken">FastAPI JWT Token</label>
+      <input type="text" id="jwtToken" placeholder="Paste your access_token here..." />
+    </div>
+
+    <div id="errorMessage" class="error"></div>
+
+    <button id="connectBtn">Connect to Google Drive</button>
+  </div>
+
+  <script type="module">
+    import { initConnectButton } from "./src/components/connectDriveButton.js";
+    initConnectButton();
+  </script>
+</body>
+</html>

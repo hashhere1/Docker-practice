@@ -75,5 +75,16 @@ services:
       redis_cache:
         condition: service_healthy
 
+  frontend:
+    build: ./frontend
+    container_name: frontend_app
+    restart: always
+    ports:
+      - "3000:80"
+    volumes:
+      - ./frontend:/usr/share/nginx/html
+    depends_on:
+      - web
+      
 volumes:
   postgres_data:

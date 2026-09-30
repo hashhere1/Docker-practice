@@ -1,6 +1,6 @@
 from datetime import datetime
 from typing import Optional
-from pydantic import BaseModel, ConfigDict, EmailStr
+from pydantic import BaseModel, ConfigDict, EmailStr, HttpUrl
 
 
 class GoogleDriveConnectionCreate(BaseModel):
@@ -18,3 +18,8 @@ class GoogleDriveConnectionResponse(BaseModel):
   created_at: datetime
 
   model_config = ConfigDict(from_attributes=True)
+
+
+class GoogleDriveAuthUrlResponse(BaseModel):
+  authorization_url: str
+  
