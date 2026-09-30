@@ -9,7 +9,9 @@ class User(Base):
     username = Column(String, nullable=False, unique=True)
     email = Column(String, nullable=False, unique=True)
     hashed_password = Column(String, nullable=False)
+    
     profile = relationship("Profile", back_populates="user", uselist=False, cascade="all, delete-orphan")
+    google_connection = relationship("GoogleDriveConnection", back_populates="user", uselist=False, cascade="all, delete-orphan")
 
 class Profile(Base):
     __tablename__ = "profiles"
