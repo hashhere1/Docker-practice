@@ -1,11 +1,18 @@
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, status
+from googleapiclient.errors import HttpError
 
 from app.models.users import User
 from app.repositories.file import FileRepository
+from app.repositories.google_drive_repo import GoogleDriveRepository
 from app.schema.files import FileResponse
 from app.services.google_drive import GoogleDriveService
-from app.utils.dependencies import get_current_user, get_drive_service, get_file_repo
+from app.utils.dependencies import (
+    get_current_user,
+    get_drive_service,
+    get_file_repo,
+    get_google_drive_repo,
+)
 from app.utils.validators import validate_file_upload
 
 router = APIRouter(prefix="/files", tags=["Files"])
@@ -20,8 +27,22 @@ def upload_file(
     file: UploadFile,
     current_user: User = Depends(get_current_user),
     file_repo: FileRepository = Depends(get_file_repo),
+    drive_repo: GoogleDriveRepository = Depends(get_google_drive_repo),
     drive_service: GoogleDriveService = Depends(get_drive_service),
 ):
+    conn = drive_repo.get_by_user_id(user_id=current_user.id)
+    if not conn:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Google Drive not connected. Please connect your Google Drive first.",
+        )
+
+    if conn.permission_type == "READ":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Current connection is Read-Only. Write permission is required to upload files.",
+        )
+
     file_size = validate_file_upload(file)
 
     try:
@@ -74,8 +95,22 @@ def delete_file(
     file_id: int,
     current_user: User = Depends(get_current_user),
     file_repo: FileRepository = Depends(get_file_repo),
+    drive_repo: GoogleDriveRepository = Depends(get_google_drive_repo),
     drive_service: GoogleDriveService = Depends(get_drive_service),
 ):
+    conn = drive_repo.get_by_user_id(user_id=current_user.id)
+    if not conn:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Google Drive not connected.",
+        )
+
+    if conn.permission_type == "READ":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Current connection is Read-Only. Delete permission is not allowed.",
+        )
+
     file_record = file_repo.get_user_file_by_id(file_id=file_id, user_id=current_user.id)
     if not file_record:
         raise HTTPException(
@@ -85,6 +120,12 @@ def delete_file(
 
     try:
         drive_service.delete_file(drive_file_id=file_record.drive_file_id)
+    except HttpError as exc:
+        if exc.resp.status != 404:
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail=f"Google Drive deletion failed: {str(exc)}",
+            )
     except Exception as exc:
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,

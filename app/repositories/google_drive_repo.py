@@ -31,6 +31,7 @@ class GoogleDriveRepository:
         connection.refresh_token = schema.refresh_token
         connection.access_token = schema.access_token
         connection.token_expiry = schema.token_expiry
+        connection.permission_type = schema.permission_type
 
         self.db.commit()
         self.db.refresh(connection)
