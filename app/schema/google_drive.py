@@ -8,6 +8,7 @@ class GoogleDriveConnectionCreate(BaseModel):
   google_email: EmailStr
   refresh_token: str
   access_token: Optional[str] = None
+  permission_type: str = "READ_WRITE"
   token_expiry: Optional[datetime] = None
 
 
@@ -16,6 +17,7 @@ class GoogleDriveConnectionResponse(BaseModel):
   user_id: int
   google_email: EmailStr
   created_at: datetime
+  permission_type: str
 
   model_config = ConfigDict(from_attributes=True)
 

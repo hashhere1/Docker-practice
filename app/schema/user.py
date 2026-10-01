@@ -4,6 +4,10 @@ from app.schema.profile import ProfileResponse
 from app.utils.validators import check_password, check_username
 
 
+class UserLogin(BaseModel):
+    username: str
+    password: str
+
 
 class UserBase(BaseModel):
     username : str = Field(

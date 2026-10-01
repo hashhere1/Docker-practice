@@ -1,7 +1,9 @@
 from functools import lru_cache
 from typing import List, Optional
 from pydantic_settings import BaseSettings, SettingsConfigDict
+import os
 
+os.environ["OAUTHLIB_RELAX_TOKEN_SCOPE"] = "1"
 
 class Settings(BaseSettings):
   PROJECT_NAME: str = "Fast API Backend"

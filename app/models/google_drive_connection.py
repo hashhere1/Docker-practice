@@ -13,6 +13,7 @@ class GoogleDriveConnection(Base):
     refresh_token = Column(Text, nullable=False)
     access_token = Column(Text, nullable=True)
     token_expiry = Column(DateTime(timezone=True), nullable=True)
+    permission_type = Column(String, default="READ_WRITE", nullable=False)
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
 
     user = relationship("User", back_populates="google_connection")
